@@ -66,30 +66,38 @@ def get_dataloaders(data_dir):
     
     return trainloader, validloader, testloader
 
+
+
+
 def nn_setup(arch, dropout, hidden_units, learning_rate, cuda):
     if arch == 'vgg16':
-        model = models.vgg16(pretrained=True)
+        model = models.vgg16(pretrained = True)
     elif arch == 'densenet121':
-        model = models.densenet121(pretrained=True)
+        model = models.densenet121(pretrained = True)
     elif arch == 'alexnet':
         model = models.alexnet(pretrained = True)
     else:
         print("{} is not a valid model.".format(arch))
+    
+    structure = {"vgg16": 25088,
+                  "densenet121" : 1024,
+                  "alexnet" : 9216 }
    
     for param in model.parameters():
         param.requires_grad = False
         
     from collections import OrderedDict
-    classifier = nn.Sequential  (OrderedDict ([
-                            ('fc1', nn.Linear (9216, 4096)),
-                            ('relu1', nn.ReLU ()),
-                            ('dropout1', nn.Dropout (p = 0.3)),
-                            ('fc2', nn.Linear (4096, 2048)),
-                            ('relu2', nn.ReLU ()),
-                            ('dropout2', nn.Dropout (p = 0.3)),
-                            ('fc3', nn.Linear (2048, 102)),
-                            ('output', nn.LogSoftmax (dim =1))
-                            ]))
+    classifier = nn.Sequential(OrderedDict([
+                    ('dropout',nn.Dropout(dropout)),
+                    ('inputs', nn.Linear(structure[arch], hidden_units)),
+                    ('relu1', nn.ReLU()),
+                    ('hidden_layer1', nn.Linear(hidden_units, 90)),
+                    ('relu2',nn.ReLU()),
+                    ('hidden_layer2',nn.Linear(90, 80)),
+                    ('relu3',nn.ReLU()),
+                    ('hidden_layer3',nn.Linear(80, 102)),
+                    ('output', nn.LogSoftmax(dim=1))
+                                  ]))
     
     model.classifier = classifier
     criterion = nn.NLLLoss()
@@ -123,7 +131,7 @@ def train_network(model, criterion, optimizer, epochs, print_every, train_loader
             optimizer.step()
 
             running_loss += loss.item()
-
+            
             # Carrying out validation step
             if steps % print_every == 0:
                 # setting model to evaluation mode during validation so that dropout is turned off
